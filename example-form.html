@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets Data</title>
+ 
+
+<!-- git remote add origin git@github.com:touilfarouk/googlesheet.git
+git branch -M main
+git push -u origin main -->
+</head>
+<body>
+    <form name="submit-to-google-sheet">
+        <input name="email" type="email" placeholder="Email" required>
+        <button type="submit">Send</button>
+    </form>
+
+    <h2>Submitted Data</h2>
+    <table border="1" id="data-table">
+        <thead>
+            <tr id="table-header"></tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+    </table>
+
+    <script>
+        const scriptURL = ''; // Replace with your Script ID
+        const form = document.forms['submit-to-google-sheet'];
+
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            fetch(scriptURL, { method: 'POST', body: new FormData(form) })
+                .then(response => {
+                    console.log('Success!', response);
+                    loadData(); // Reload table after submission
+                })
+                .catch(error => console.error('Error!', error.message));
+        });
+
+        function loadData() {
+            fetch(scriptURL)
+                .then(response => response.json())
+                .then(data => {
+                    const tableHeader = document.getElementById('table-header');
+                    const tableBody = document.getElementById('table-body');
+
+                    tableHeader.innerHTML = '';
+                    tableBody.innerHTML = '';
+
+                    if (data.length > 0) {
+                        // Create table headers
+                        Object.keys(data[0]).forEach(key => {
+                            const th = document.createElement('th');
+                            th.textContent = key;
+                            tableHeader.appendChild(th);
+                        });
+
+                        // Populate table rows
+                        data.forEach(row => {
+                            const tr = document.createElement('tr');
+                            Object.values(row).forEach(value => {
+                                const td = document.createElement('td');
+                                td.textContent = value;
+                                tr.appendChild(td);
+                            });
+                            tableBody.appendChild(tr);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error loading data!', error));
+        }
+
+        // Load data on page load
+        loadData();
+    </script>
+</body>
+</html>
+
+
+--------------------------------------------------------------------------------------
+var sheetName = 'Sheet1';
+var scriptProp = PropertiesService.getScriptProperties();
+
+function initialSetup() {
+  var activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  PropertiesService.getScriptProperties().setProperty('key', activeSpreadsheet.getId());
+}
+
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  lock.tryLock(10000);
+
+  try {
+    var doc = SpreadsheetApp.openById(scriptProp.getProperty('key'));
+    var sheet = doc.getSheetByName(sheetName);
+
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var nextRow = sheet.getLastRow() + 1;
+
+    var newRow = headers.map(function(header) {
+      return header === 'timestamp' ? new Date() : e.parameter[header];
+    });
+
+    sheet.getRange(nextRow, 1, 1, newRow.length).setValues([newRow]);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ 'result': 'success', 'row': nextRow }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ 'result': 'error', 'error': error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Function to handle GET request and return spreadsheet data
+function doGet() {
+  var doc = SpreadsheetApp.openById(scriptProp.getProperty('key'));
+  var sheet = doc.getSheetByName(sheetName);
+  var data = sheet.getDataRange().getValues(); // Get all data from the sheet
+  var headers = data.shift(); // Extract headers
+  var jsonData = data.map(row => {
+    let obj = {};
+    row.forEach((value, index) => {
+      obj[headers[index]] = value; // Map each column to the corresponding header
+    });
+    return obj;
+  });
+
+  return ContentService
+    .createTextOutput(JSON.stringify(jsonData))
+    .setMimeType(ContentService.MimeType.JSON);
+}

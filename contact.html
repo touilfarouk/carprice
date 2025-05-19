@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Contact Seller</title>
+  <style>
+    body { font-family: Arial; padding: 2rem; background: #f5f5f5; }
+    .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 0 10px #ccc; max-width: 600px; margin: auto; }
+    .car-info { font-weight: bold; margin-bottom: 1rem; }
+    textarea, input { width: 100%; margin-bottom: 1rem; padding: 0.5rem; }
+    button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+    .response { margin-top: 1rem; color: green; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Contact the Seller</h2>
+    <div class="car-info" id="carInfo">Car Matricule: </div>
+
+    <input type="text" id="name" placeholder="Your Name" required>
+    <textarea id="message" placeholder="Hi, I'm interested in your car..." required></textarea>
+    <button onclick="sendMessage()">Send</button>
+    <div class="response" id="responseMsg"></div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const carMatricule = params.get('car') || 'unknown';
+    document.getElementById('carInfo').textContent = `Car Matricule: ${carMatricule}`;
+
+    function sendMessage() {
+      const name = document.getElementById('name').value.trim();
+      const message = document.getElementById('message').value.trim();
+      if (!name || !message) {
+        alert("Please fill out all fields.");
+        return;
+      }
+
+      fetch('save_message.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `car=${encodeURIComponent(carMatricule)}&name=${encodeURIComponent(name)}&message=${encodeURIComponent(message)}`
+      })
+      .then(res => res.text())
+      .then(res => {
+        document.getElementById('responseMsg').textContent = res;
+        document.getElementById('message').value = '';
+        document.getElementById('name').value = '';
+      })
+      .catch(err => {
+        document.getElementById('responseMsg').textContent = 'Error sending message.';
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Car Info Submission</title>
+</head>
+<body>
+  <h2>Submit Car Information</h2>
+  <form id="carForm">
+    <label for="matricule">Matricule:</label><br>
+    <input type="text" id="matricule" name="matricule" required><br><br>
+
+    <label for="year_of_release">Year of Release:</label><br>
+    <input type="number" id="year_of_release" name="year_of_release" required><br><br>
+
+    <label for="car_type">Car Type:</label><br>
+    <input type="text" id="car_type" name="car_type" required><br><br>
+
+    <button type="submit">Submit</button>
+  </form>
+<div id="qrFlyer" style="display:none; margin-top:2rem; text-align:center;">
+  <h3>QR Flyer</h3>
+  <p>Hang this on your car:</p>
+  <div id="flyerContent" style="border:1px solid #ccc; padding:1rem; display:inline-block;">
+    <div id="carDetails"></div>
+    <img id="qrImage" src="" alt="QR Code">
+  </div>
+  <br>
+  <button onclick="window.print()">Print</button>
+</div>
+  <p id="response"></p>
+
+  <script>
+    document.getElementById('carForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const formData = new FormData(this);
+      const data = new URLSearchParams();
+
+      for (const pair of formData) {
+        data.append(pair[0], pair[1]);
+      }
+
+      fetch('https://script.google.com/macros/s/AKfycbyBV_Zi1OGPVRcbyczCOuV4MyVKSH5TLjqk1229wSLIzldys8sPJCx9qsc_vUdXFhxYIA/exec', {
+        method: 'POST',
+        body: data
+      })
+      .then(response => response.json())
+     .then(json => {
+  if (json.result === 'success') {
+    const matricule = document.getElementById('matricule').value;
+    const year = document.getElementById('year_of_release').value;
+    const carType = document.getElementById('car_type').value;
+
+    const contactUrl = `https://onta.dz/bn/contact.html?car=${encodeURIComponent(matricule)}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(contactUrl)}&size=200x200`;
+
+    document.getElementById('carDetails').innerHTML = `
+      <strong>Matricule:</strong> ${matricule}<br>
+      <strong>Year:</strong> ${year}<br>
+      <strong>Type:</strong> ${carType}<br><br>
+    `;
+
+    document.getElementById('qrImage').src = qrUrl;
+    document.getElementById('qrFlyer').style.display = 'block';
+
+    document.getElementById('response').textContent = `Data submitted successfully (Row ${json.row})`;
+  } else {
+    document.getElementById('response').textContent = `Error: ${json.error}`;
+  }
+})
+
+      .catch(err => {
+        document.getElementById('response').textContent = `Error: ${err}`;
+      });
+    });
+  </script>
+</body>
+</html>
